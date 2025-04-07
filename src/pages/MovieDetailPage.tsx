@@ -1,80 +1,109 @@
-// import React from 'react';
+import { Movie } from "../types/movie";
+import { Credit } from "../types/credit";
 import { useParams } from "react-router-dom";
-// import { Movie, MovieResponse } from "../types/movie";
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-// import MovieCard from "../component/MovieCard";
-// import LoadingSpinner from "../component/LoadingSpinner";
-// import Pagination from "../component/Pagination";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import LoadingSpinner from "../component/LoadingSpinner";
+import CreditCard from "../component/CreditCard";
 
 const MovieDetailPage = () => {
   const { movieId } = useParams<{ movieId: string }>();
-  return <div>MovieDetailPage {movieId}</div>;
-  //   const [movies, setMovies] = useState<Movie[]>([]); // useState에 Movie[] 타입 지정
-  //   const [movieDetail, setMovieDetail] = useState<Movie[]>([]); // useState에 Movie[] 타입 지정
+  const [movieDetail, setMovieDetail] = useState<Movie | null>(null);
+  const [credits, setCredits] = useState<Credit | null>(null);
 
-  //   // 1. 로딩 상태
-  //   const [isPending, setIsPending] = useState(false);
-  //   // 2. 에러 상태
-  //   const [isError, setIsError] = useState(false);
-  //   // 3. 페이지
-  //   const [page, setPage] = useState(1);
-  //   // 4. 카테고리
-  //   const { movieId } = useParams();
+  // 1. 로딩 상태
+  const [isPending, setIsPending] = useState(false);
+  // 2. 에러 상태
+  const [isError, setIsError] = useState(false);
 
-  //   useEffect((): void => {
-  //     const fetchMovies = async (): Promise<void> => {
-  //       // fetchMovies가 시작 시점에는 로딩 상태가 data를 호출하는 중이기 때문에 setIsPending(true)
-  //       setIsPending(true);
+  useEffect((): void => {
+    const fetchMovieDetail = async (): Promise<void> => {
+      setIsPending(true);
 
-  //       try {
-  //         const { data } = await axios.get<MovieResponse>(
-  //           `https://api.themoviedb.org/3/movie/${movieId}`,
-  //           {
-  //             headers: {
-  //               Authorization: `Bearer ${import.meta.env.VITE_TMDB_KEY}`, // 환경변수를 사용할 때 접두사 VITE_를 붙여야 함
-  //             },
-  //           }
-  //         );
+      try {
+        // 1. 영화 상세 정보
+        const { data: detail } = await axios.get(
+          // response 객체에서 data를 꺼내서 movieDetail라는 변수명으로 저장
+          `https://api.themoviedb.org/3/movie/${movieId}?language=ko-KR`,
+          {
+            headers: {
+              Authorization: `Bearer ${import.meta.env.VITE_TMDB_KEY}`,
+            },
+          }
+        );
 
-  //         setMovies(data.results);
-  //         console.log(data.results);
-  //       } catch {
-  //         setIsError(true);
-  //       } finally {
-  //         // finally는 성공하든 실패하든 무조건 실행
-  //         setIsPending(false); // 데이터 호출이 끝났으니 로딩 상태 false
-  //       }
-  //     };
+        // 2. 출연진 정보
+        const { data: credits } = await axios.get(
+          // response 객체에서 data를 꺼내서 credits라는 변수명으로 저장
+          `https://api.themoviedb.org/3/movie/${movieId}/credits?language=ko-KR`,
+          {
+            headers: {
+              Authorization: `Bearer ${import.meta.env.VITE_TMDB_KEY}`,
+            },
+          }
+        );
 
-  //     fetchMovies();
-  //   }, []); // page와 category가 바뀔 때마다 useEffect가 실행됨
+        setMovieDetail(detail);
+        setCredits(credits);
 
-  //   if (isError) {
-  //     return (
-  //       <div>
-  //         <span className="text-red-500 text-2xl">에러가 발생했습니다.</span>
-  //       </div>
-  //     );
-  //   }
+        console.log("movie:", detail);
+        console.log("credits:", credits);
+      } catch {
+        setIsError(true);
+      } finally {
+        setIsPending(false);
+      }
+    };
 
-  //   return (
-  //     <>
-  //       <Pagination page={page} setPage={setPage} />
-  //       {isPending && (
-  //         <div className="flex items-center justify-center h-dvh">
-  //           <LoadingSpinner />
-  //         </div>
-  //       )}
-  //       {!isPending && (
-  //         <div className="p-10 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-  //           {movies.map((movie) => (
-  //             <MovieCard key={movie.id} movie={movie} />
-  //           ))}
-  //         </div>
-  //       )}
-  //     </>
-  //   );
+    fetchMovieDetail();
+  }, []);
+
+  if (isError) {
+    return (
+      <div>
+        <span className="text-red-500 text-2xl">에러가 발생했습니다.</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {isPending && (
+        <div className="flex items-center justify-center h-dvh">
+          <LoadingSpinner />
+        </div>
+      )}
+      {!isPending && (
+        <>
+          <div
+            className="flex items-center justify-center absolute top-0 left-0 w-full h-96 mb-5 inset-0 bg-gradient-to-t from-black/50 
+        to-transparent backdrop-blur-md"
+          >
+            <img
+              src={`http://image.tmdb.org/t/p/w500${movieDetail?.backdrop_path}`}
+              alt={`${movieDetail?.title} 영화의 이미지`}
+              className="w-full h-96 object-cover"
+            />
+          </div>
+          <div id="movie-detail" className="p-10 relative ">
+            <h1 className="p-1">{movieDetail?.title}</h1>
+            <h2 className="p-1">평균 {movieDetail?.vote_average.toFixed(1)}</h2>
+            <h2 className="p-1">{movieDetail?.release_date?.split("-")[0]}</h2>
+            <h2 className="p-1">{movieDetail?.runtime}분</h2>
+            <p className="p-1 line-clamp-5">{movieDetail?.overview}</p>
+          </div>
+          <div
+            id="credit-detail"
+            className="p-10 grid gap-1 grid-cols-10 sm:grid-cols-10 mt-5"
+          >
+            {credits?.cast.map((cast) => (
+              <CreditCard key={cast.id} cast={cast} />
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
 };
 
 export default MovieDetailPage;
